@@ -1,0 +1,151 @@
+---
+title: "powerLMM"
+output: html_document
+date: "2024-02-08"
+---
+
+```{r message=FALSE, warning=FALSE}
+library(lmerTest)
+
+# Set seed for reproducibility
+set.seed(42)
+
+# Number of subjects
+n_subjects <- 100
+
+# Generate random values for diversity (one for each subject)
+diversity <- rnorm(n_subjects, mean = 0.55, sd = 0.24) # based on Hwang et al. (2020)
+
+# Number of observations per subject
+n_obs_per_subject <- 6 # 3 videos for each stranger, so 6 videos in total for every subject
+
+# Create a pattern of condition
+condition <- rep(c(1, 1, 1, 0, 0, 0), times = n_subjects) # 1 indicates own-race, 0 indicates other-race
+
+# Repeat diversity values for each observation within the subject
+diversity <- rep(diversity, each = n_obs_per_subject) # each subject should have the same diversity value
+
+# Create a data frame with generated data
+data <- data.frame(diversity = diversity, condition = condition)
+
+# Generate random values for the grouping variable (ID)
+data$ID <- factor(rep(1:n_subjects, each = n_obs_per_subject))
+
+data$scores <- rnorm(n_subjects * n_obs_per_subject, 0.67, 1.17) # generate scores based on the distribution of pilot study of Hi Stranger, mean = 0.67, sd = 1.17
+
+# Fit a mixed-effects model to the simulated data to verify the estimated effect size
+model <- lmer(scores ~ 1 + diversity + condition + diversity:condition + (1|ID), data = data)
+summary(model)
+
+```
+
+```{r message=FALSE, warning=FALSE}
+library(simr)
+model1 <- glmer(scores ~ 1 + diversity + condition + diversity:condition + (1|ID), family="gaussian", data=data)
+summary(model1)
+
+fixef(model1)["diversity:condition"]
+
+fixef(model1)["diversity:condition"] <- 1 # test the effect size to reach 80% power
+
+powerSim(model1, test=fixed("diversity:condition"))
+
+fixef(model1)["diversity:condition"] <- 1.1 # test the effect size to reach 80% power
+
+powerSim(model1, test=fixed("diversity:condition"))
+
+fixef(model1)["diversity:condition"] <- 1.2 # test the effect size to reach 80% power
+
+powerSim(model1, test=fixed("diversity:condition"))
+
+fixef(model1)["diversity:condition"] <- 1.3 # test the effect size to reach 80% power
+
+powerSim(model1, test=fixed("diversity:condition"))
+
+fixef(model1)["diversity:condition"] <- 1.4 # test the effect size to reach 80% power
+
+powerSim(model1, test=fixed("diversity:condition"))
+
+```
+
+
+# calculate effect size r for each simulated model
+```{r}
+model <- lmer(scores ~ 1 + diversity + condition + diversity:condition + (1|ID), data = data)
+summary(model)
+
+
+fixef(model)
+
+fixef(model)["diversity:condition"] <- 1
+all_t<-summary(model)$coefficients[, "t value"]
+all_df<-summary(model)$coefficients[, "df"]
+t <- all_t[4]
+df <- all_df[4]
+r <- sqrt(t^2/(t^2+df))
+r
+
+fixef(model)["diversity:condition"] <- 1.1
+all_t<-summary(model)$coefficients[, "t value"]
+all_df<-summary(model)$coefficients[, "df"]
+t <- all_t[4]
+df <- all_df[4]
+r <- sqrt(t^2/(t^2+df))
+r
+
+fixef(model)["diversity:condition"] <- 1.2
+all_t<-summary(model)$coefficients[, "t value"]
+all_df<-summary(model)$coefficients[, "df"]
+t <- all_t[4]
+df <- all_df[4]
+r <- sqrt(t^2/(t^2+df))
+r
+
+fixef(model)["diversity:condition"] <- 1.3
+all_t<-summary(model)$coefficients[, "t value"]
+all_df<-summary(model)$coefficients[, "df"]
+t <- all_t[4]
+df <- all_df[4]
+r <- sqrt(t^2/(t^2+df))
+r
+
+fixef(model)["diversity:condition"] <- 1.4
+all_t<-summary(model)$coefficients[, "t value"]
+all_df<-summary(model)$coefficients[, "df"]
+t <- all_t[4]
+df <- all_df[4]
+r <- sqrt(t^2/(t^2+df))
+r
+
+```
+# calculate the effect size of Hwang et al. (2020)
+```{r}
+library(readxl)
+library(plyr) 
+library(dplyr)
+library(data.table)
+library(lme4)
+library(optimx)
+P01_data <- read_xlsx("P01_data.xlsx")
+
+data_white <- subset(P01_data,Child_race == "White")
+
+# control to help convergence of models
+control2 <- lmerControl(optimizer = "optimx", calc.derivs = FALSE,
+                        optCtrl = list(method = "nlminb",
+                                       starttests = FALSE, kkt = FALSE))
+
+model<-lmer(Fp_obsgrsp_t2000t1000_f35 ~ Group*race_outgroup_zipcode+Age
+                                    +(1+Group+race_outgroup_zipcode|Study),
+                       data = data_white, control=control2, REML = FALSE)
+summary(model)
+all_t<-summary(model)$coefficients[, "t value"]
+all_df<-summary(model)$coefficients[, "df"]
+t <- all_t[5]
+df <- all_df[5]
+r <- sqrt(t^2/(t^2+df))
+r
+
+```
+
+

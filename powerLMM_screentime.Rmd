@@ -1,0 +1,86 @@
+---
+title: "powerLMM"
+output: html_document
+date: "2024-02-08"
+---
+
+```{r message=FALSE, warning=FALSE}
+library(lmerTest)
+
+# Set seed for reproducibility
+set.seed(42)
+
+# Number of subjects
+n_subjects <- 100
+
+# Generate random values for social fear (TBAQ)
+fear <- rnorm(n_subjects, mean = 3.89, sd = 0.85) # based on Goldsmith (1996)
+
+# Number of observations per subject
+n_obs_per_subject <- 6 # 3 videos for each stranger, so 6 videos in total for every subject
+
+# Generate random values for social fear (TBAQ)
+frequency <- rnorm(n_subjects, mean = 3, sd = 1) # middle value from the survey
+
+
+# Repeat fear values for each observation within the subject
+fear <- rep(fear, each = n_obs_per_subject) 
+frequency <- rep(frequency, each = n_obs_per_subject) 
+
+# Create a data frame with generated data
+data <- data.frame(fear = fear, frequency = frequency)
+
+# Generate random values for the grouping variable (ID)
+data$ID <- factor(rep(1:n_subjects, each = n_obs_per_subject))
+
+data$scores <- rnorm(n_subjects * n_obs_per_subject, 0.67, 1.17) # generate scores based on the distribution of pilot study of Hi Stranger, mean = 0.67, sd = 1.17
+
+# Fit a mixed-effects model to the simulated data to verify the estimated effect size
+model <- lmer(scores ~ 1 + frequency + (1|ID), data = data)
+summary(model) 
+
+# Fit a mixed-effects model to the simulated data to verify the estimated effect size
+model <- lmer(scores ~ 1 + fear + frequency + fear:frequency + (1|ID), data = data)
+summary(model)
+
+```
+# frequency
+```{r message=FALSE, warning=FALSE}
+library(simr)
+model1 <- lmer(scores ~ 1 + frequency + (1|ID), data = data)
+summary(model1)
+
+fixef(model1)["frequency"]
+
+fixef(model1)["frequency"] <- 0.16 # test the effect size to reach 80% power
+
+powerSim(model1, test=fixed("frequency"))
+
+all_t<-summary(model1)$coefficients[, "t value"]
+all_df<-summary(model1)$coefficients[, "df"]
+t <- all_t[2]
+df <- all_df[2]
+r <- sqrt(t^2/(t^2+df))
+r
+```
+
+# frequency:fear
+```{r message=FALSE, warning=FALSE}
+library(simr)
+model1 <- lmer(scores ~ 1 + fear + frequency + fear:frequency + (1|ID), data = data)
+summary(model1)
+
+fixef(model1)["fear:frequency"]
+
+fixef(model1)["fear:frequency"] <- -0.15 # test the effect size to reach 80% power
+
+powerSim(model1, test=fixed("fear:frequency"))
+
+all_t<-summary(model)$coefficients[, "t value"]
+all_df<-summary(model)$coefficients[, "df"]
+t <- all_t[4]
+df <- all_df[4]
+r <- sqrt(t^2/(t^2+df))
+r
+
+```
